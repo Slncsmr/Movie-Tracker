@@ -2,21 +2,22 @@ const http = require('http');
 const url = require('url');
 const qstring = require('querystring');
 const fs = require('fs');
-const APIKEY = "" // Place your OMDb API key here
+const APIKEY = "";
 
-let movieHistory = []; // Array to store movie search history
+let movieHistory = [];
+let TimeWatched = 0;
 
-// Function to read movie history from the file and update movieHistory array
 function loadMovieHistory() {
     const filePath = 'movies.json';
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (!err && data) {
-            movieHistory = JSON.parse(data);
+            const parsedData = JSON.parse(data);
+            movieHistory = parsedData.movies || [];
+            TimeWatched = parsedData.TimeWatched || 0;
         }
     });
 }
 
-// Function to append movie data to a JSON file and prevent duplicates
 function appendMovieDataToFile(movieData) {
     const filePath = 'movies.json';
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -27,15 +28,22 @@ function appendMovieDataToFile(movieData) {
 
         let movies = [];
         if (data) {
-            movies = JSON.parse(data);
+            const parsedData = JSON.parse(data);
+            movies = parsedData.movies || [];
+            
         }
 
-        // Prevent duplicate entries
         if (!movies.some(movie => movie.Title === movieData.Title)) {
             movies.push(movieData);
+            movieHistory.push(movieData); // Update movieHistory array
         }
 
-        fs.writeFile(filePath, JSON.stringify(movies, null, 2), (err) => {
+        const updatedData = {
+            movies: movies,
+            TimeWatched: TimeWatched
+        };
+
+        fs.writeFile(filePath, JSON.stringify(updatedData, null, 2), (err) => {
             if (err) {
                 console.error('Error writing file:', err);
             }
@@ -52,31 +60,38 @@ function sendResponse(movieData, res) {
                '<body>' +
                     '<form method="post">' +
                     'Movie Name: <input name="movie"><br>' +
-                    '<input type="submit" value="Get Movie Info">' +
-                    '</form>';
+                    '<input type="submit" value="Add Movie">' +
+                    '</form>'+
+                    `<p>Time Watched: ${TimeWatched} minutes</p>`; // Display TimeWatched
 
-    // Display current movie search result
     if (movieData) {
-        page += `<h1>Current Movie Info</h1>
-                 <p><strong>Title:</strong> ${movieData.Title}</p>
-                 <p><strong>Year:</strong> ${movieData.Year}</p>
-                 <p><strong>Genre:</strong> ${movieData.Genre}</p>
-                 <p><strong>Director:</strong> ${movieData.Director}</p>
-                 <p><strong>Actors:</strong> ${movieData.Actors}</p>
-                 <p><strong>Plot:</strong> ${movieData.Plot}</p>`;
+        page += `<div>
+                    <h1>Current Movie Info</h1>
+                    <img src="${movieData.Poster}" alt="${movieData.Title}">
+                    <br>
+                    <p><strong>Title:</strong> ${movieData.Title}</p>
+                    <p><strong>Year:</strong> ${movieData.Year}</p>
+                    <p><strong>Genre:</strong> ${movieData.Genre}</p>
+                    <p><strong>Director:</strong> ${movieData.Director}</p>
+                    <p><strong>Actors:</strong> ${movieData.Actors}</p>
+                    <p><strong>Plot:</strong> ${movieData.Plot}</p>
+                    <p><strong>Runtime:</strong> ${movieData.Runtime} minutes</p>
+                 </div>`;
     }
 
-    // Display history of previously searched movies in stack format (latest first)
     if (movieHistory.length > 0) {
         page += `<h2>Previous Movie Searches:</h2>`;
-        movieHistory.slice().reverse().forEach(movie => {  // Reverse to show latest first
+        movieHistory.slice().reverse().forEach(movie => {
             page += `<div style="border-bottom: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+                        <img src="${movie.Poster}" alt="${movie.Title}">
+                        <br>
                         <p><strong>Title:</strong> ${movie.Title}</p>
                         <p><strong>Year:</strong> ${movie.Year}</p>
                         <p><strong>Genre:</strong> ${movie.Genre}</p>
                         <p><strong>Director:</strong> ${movie.Director}</p>
                         <p><strong>Actors:</strong> ${movie.Actors}</p>
                         <p><strong>Plot:</strong> ${movie.Plot}</p>
+                        <p><strong>Runtime:</strong> ${movie.Runtime} minutes</p>
                      </div>`;
         });
     }
@@ -87,28 +102,45 @@ function sendResponse(movieData, res) {
 
 function parseMovie(movieResponse, res) {
     let movieData = '';
+
     movieResponse.on('data', function (chunk) {
         movieData += chunk;
     });
 
     movieResponse.on('end', function () {
-        const movieJson = JSON.parse(movieData);
-        const selectedData = {
-            Title: movieJson.Title,
-            Year: movieJson.Year,
-            Genre: movieJson.Genre,
-            Director: movieJson.Director,
-            Actors: movieJson.Actors,
-            Plot: movieJson.Plot
-        };
+        try {
+            const movieJson = JSON.parse(movieData);
 
-        // Prevent duplicate entries in memory
-        if (!movieHistory.some(movie => movie.Title === selectedData.Title)) {
-            movieHistory.push(selectedData);
+            if (movieJson.Response === "False") { // Check if movie not found
+                sendResponse(null, res);
+                return;
+            }
+
+            if(movieJson.Runtime === 'N/A')
+            {
+                movieJson.Runtime = '0 min';
+            }
+
+            const runtime = movieJson.Runtime.replace(' min', '') ;
+
+            const selectedData = {
+                Runtime: runtime,
+                Title: movieJson.Title,
+                Year: movieJson.Year,
+                Genre: movieJson.Genre,
+                Director: movieJson.Director,
+                Actors: movieJson.Actors,
+                Plot: movieJson.Plot,
+                Poster: movieJson.Poster || '' // Avoids undefined values
+            };
+
+            TimeWatched += parseInt(selectedData.Runtime); // Update TimeWatched before sending response
+            appendMovieDataToFile(selectedData);
+            sendResponse(selectedData, res);
+        } catch (error) {
+            console.error("Error parsing movie data:", error);
+            sendResponse(null, res);
         }
-
-        sendResponse(selectedData, res);
-        appendMovieDataToFile(selectedData);
     });
 }
 
@@ -139,6 +171,5 @@ http.createServer(function (req, res) {
         sendResponse(null, res);
     }
 }).listen(8080, () => {
-    // Load existing movie history when the server starts
     loadMovieHistory();
 });
