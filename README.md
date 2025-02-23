@@ -13,7 +13,7 @@ Movie Tracker is a simple Node.js application that allows users to search for mo
 ## Prerequisites
 
 - Node.js installed on your machine.
-- An API key from [OMDb API](http://www.omdbapi.com/apikey.aspx).
+- An API key from [OMDb API](https://www.omdbapi.com/).
 
 ## Installation
 
@@ -30,7 +30,7 @@ Movie Tracker is a simple Node.js application that allows users to search for mo
     npm install
     ```
 
-3. Create a [movies.json](http://_vscodecontentref_/1) file in the root directory:
+3. Create a `movies.json` file in the root directory:
 
     ```json
     {
@@ -39,7 +39,7 @@ Movie Tracker is a simple Node.js application that allows users to search for mo
     }
     ```
 
-4. Update the [APIKEY](http://_vscodecontentref_/2) variable in [app.js](http://_vscodecontentref_/3) with your OMDb API key:
+4. Update the `APIKEY` variable in `app.js` with your OMDb API key:
 
     ```javascript
     const APIKEY = "your_api_key_here";
@@ -53,7 +53,7 @@ Movie Tracker is a simple Node.js application that allows users to search for mo
     node app.js
     ```
 
-2. Open your web browser and navigate to [http://localhost:8080](http://_vscodecontentref_/4).
+2. Open your web browser and navigate to `http://localhost:8080`.
 
 3. Enter the name of a movie in the input field and click "Add Movie".
 
@@ -61,35 +61,6 @@ Movie Tracker is a simple Node.js application that allows users to search for mo
 
 ## File Structure
 
-- [app.js](http://_vscodecontentref_/5): The main application file that handles the server, movie search, and data storage.
-- [movies.json](http://_vscodecontentref_/6): A JSON file that stores the movie history and total time watched.
+- `app.js`: The main application file that handles the server, movie search, and data storage.
+- `movies.json`: A JSON file that stores the movie history and total time watched.
 
-## Code Overview
-
-### [loadMovieHistory()](http://_vscodecontentref_/7)
-
-Loads the movie history and total time watched from [movies.json](http://_vscodecontentref_/8).
-
-### [appendMovieDataToFile(movieData)](http://_vscodecontentref_/9)
-
-Appends new movie data to [movies.json](http://_vscodecontentref_/10) and updates the total time watched.
-
-### [sendResponse(movieData, res)](http://_vscodecontentref_/11)
-
-Generates and sends the HTML response to the client, displaying the current movie information, total time watched, and movie history.
-
-### [parseMovie(movieResponse, res)](http://_vscodecontentref_/12)
-
-Parses the movie data received from the OMDb API, updates the total time watched, and calls [appendMovieDataToFile](http://_vscodecontentref_/13) and [sendResponse](http://_vscodecontentref_/14).
-
-### [getMovie(movieName, res)](http://_vscodecontentref_/15)
-
-Sends a request to the OMDb API to search for a movie by title.
-
-### [http.createServer()](http://_vscodecontentref_/16)
-
-Creates the HTTP server that handles incoming requests and responses.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
